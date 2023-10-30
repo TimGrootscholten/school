@@ -85,48 +85,76 @@ function test_package() {
     echo "$package_name has been tested successfully."
 }
 
-# Function to remove installed dependencies during setup
-function remove() {
-    echo "Removing installed dependencies..."
-
-    for package in "${packages[@]}"; do
-        if command -v "$package" &>/dev/null; then
-            sudo apt-get remove -y "$package"
-        fi
-    done
-
-    # Remove the installation directory and its contents
-    rm -rf "$INSTALL_DIR"
-
-    echo "All dependencies and installed packages have been removed."
+# Function to handle rollback for package installation
+function rollback_package() {
+    local package_name="$1"
+    echo "Rolling back $package_name installation..."
+    # Implement the rollback logic for package installation here
+    echo "$package_name installation has been rolled back."
 }
 
-# Function to handle rollback for nosecrets installation
-function rollback_nosecrets() {
-    echo "Rolling back nosecrets installation..."
-    # Implement the rollback logic for nosecrets installation here
-    echo "nosecrets installation has been rolled back."
-}
+# Function to handle the main logic of the script
+function main() {
+    # Read global variables from configfile
+    source config.conf
 
-# Function to handle rollback for pywebserver installation
-function rollback_pywebserver() {
-    echo "Rolling back pywebserver installation..."
-    # Implement the rollback logic for pywebserver installation here
-    echo "pywebserver installation has been rolled back."
-}
+    # Get arguments from the command line
+    local command="$1"
+    local package_name="$2"
+    local action="$3"
 
-# Function to handle setup for nosecrets installation
-function setup_nosecrets() {
-    echo "Setting up nosecrets..."
-    # Implement the setup logic for nosecrets installation here
-    echo "nosecrets setup complete."
-}
+    if [ -z "$command" ]; then
+        handle_error "Missing command. Usage: $0 <command> [package] [action]"
+    fi
 
-# Function to handle setup for pywebserver installation
-function setup_pywebserver() {
-    echo "Setting up pywebserver..."
-    # Implement the setup logic for pywebserver installation here
-    echo "pywebserver setup complete."
+    case "$command" in
+        "setup")
+            setup
+            ;;
+        *)
+            if [ -z "$package_name" ]; then
+                handle_error "Missing package name. Usage: $0 $command <package> [action]"
+            fi
+
+            case "$package_name" in
+                "nosecrets")
+                    case "$action" in
+                        "--install")
+                            install_package "nosecrets" "$APP1_URL" "$INSTALL_DIR"
+                            ;;
+                        "--uninstall")
+                            uninstall_package "nosecrets" "$INSTALL_DIR"
+                            ;;
+                        "--test")
+                            test_package "nosecrets"
+                            ;;
+                        *)
+                            handle_error "Invalid action for nosecrets. Use --install, --uninstall, or --test."
+                            ;;
+                    esac
+                    ;;
+                "pywebserver")
+                    case "$action" in
+                        "--install")
+                            install_package "pywebserver" "$APP2_URL" "$INSTALL_DIR"
+                            ;;
+                        "--uninstall")
+                            uninstall_package "pywebserver" "$INSTALL_DIR"
+                            ;;
+                        "--test")
+                            test_package "pywebserver"
+                            ;;
+                        *)
+                            handle_error "Invalid action for pywebserver. Use --install, --uninstall, or --test."
+                            ;;
+                    esac
+                    ;;
+                *)
+                    handle_error "Invalid package name. Use 'nosecrets' or 'pywebserver'."
+                    ;;
+            esac
+            ;;
+    esac
 }
 
 # Pass command-line arguments to function main
