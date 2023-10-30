@@ -1,161 +1,218 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# Define global variables here
+
+# Define required and additional package dependencies
+declare -a packages=("unzip" "wget" "curl")
+
+# Define the installation directory
+install_dir="./apps"
 
 # Function to handle errors
-handle_error() {
-    # Add error handling logic here
+function handle_error() {
     echo "Error: $1"
+    if [ -n "$2" ]; then
+        eval "$2"
+    fi
     exit 1
 }
 
-# Function to install dependencies
-install_dependencies() {
-    # Check if 'unzip' is installed
-    if ! command -v unzip &> /dev/null; then
-        echo "Installing 'unzip'..."
-        sudo apt-get update
-        sudo apt-get install unzip -y
-        if [ $? -ne 0 ]; then
-            handle_error "Failed to install 'unzip'"
+# Function to solve dependencies
+function setup() {
+    echo "Setting up..."
+
+    # Check if necessary dependencies and folder structure exist
+    for package in "${packages[@]}"; do
+        if ! dpkg -l | grep -q "$package"; then
+            handle_error "Dependency '$package' is not installed. Please install it." "sudo apt-get install $package"
+        else
+            echo "Dependency '$package' is installed."
         fi
+    done
+
+    if [ ! -d "$install_dir" ]; then
+        mkdir -p "$install_dir"
+        echo "Created '$install_dir' directory."
     fi
 
-    # Check if 'wget' is installed
-    if ! command -v wget &> /dev/null; then
-        echo "Installing 'wget'..."
-        sudo apt-get update
-        sudo apt-get install wget -y
-        if [ $? -ne 0 ]; then
-            handle_error "Failed to install 'wget'"
-        fi
+    if [ ! -f "config.conf" ]; then
+        touch "config.conf"
+        echo "Created 'config.conf' file."
     fi
 
-    # Check if 'curl' is installed
-    if ! command -v curl &> /dev/null; then
-        echo "Installing 'curl'..."
-        sudo apt-get update
-        sudo apt-get install curl -y
-        if [ $? -ne 0 ]; then
-            handle_error "Failed to install 'curl'"
-        fi
+    if [ -d "$install_dir" ] && [ -f "config.conf" ]; then
+        echo "Setup completed successfully."
+    else
+        handle_error "Setup failed. Please check the required folder and file structure."
     fi
 }
 
-# Function to create directory and file structure
-create_directory_structure() {
-    # Check if necessary directories exist
-    local base_dir="./apps"
-    local nosecrets_dir="$base_dir/nosecrets"
-    local pywebserver_dir="$base_dir/pywebserver"
-
-    if [ ! -d "$nosecrets_dir" ]; then
-        echo "Creating directory structure for 'nosecrets'..."
-        mkdir -p "$nosecrets_dir"
-    fi
-
-    if [ ! -d "$pywebserver_dir" ]; then
-        echo "Creating directory structure for 'pywebserver'..."
-        mkdir -p "$pywebserver_dir"
-    fi
-}
-
-# Function to install a package
-install_package() {
+# Function to install a package from a URL
+function install_package() {
     local package_name="$1"
+    local package_url="$2"
+    local package_install_dir="$3"
+    
+    echo "Installing $package_name..."
 
-    # Check if the package has already been installed
-    if [ -d "./apps/$package_name" ]; then
-        echo "'$package_name' is already installed."
-        return
+    if [ -d "$package_install_dir/$package_name" ]; then
+        handle_error "$package_name is already installed."
     fi
 
-    local package_url=""
+    if [ -z "$package_url" ]; then
+        handle_error "Package URL is not specified in config.conf for $package_name."
+    fi
+
+    if [ ! -d "$package_install_dir" ]; then
+        mkdir -p "$package_install_dir"
+    fi
+
+    if ! wget -q "$package_url" -P "$package_install_dir"; then
+        handle_error "Failed to download $package_name from $package_url."
+    fi
+
+    if ! unzip -q "$package_install_dir/$(basename "$package_url")" -d "$package_install_dir"; then
+        handle_error "Failed to unzip $package_name."
+    fi
+
+    # Implement application-specific installation logic if needed
     if [ "$package_name" == "nosecrets" ]; then
-        package_url="https://github.com/bartobri/no-more-secrets/archive/main.zip"
+        # Add any Nosecrets-specific installation steps here
+        echo "Nosecrets-specific installation steps..."
     elif [ "$package_name" == "pywebserver" ]; then
-        package_url="https://github.com/nickjj/webserver/archive/main.zip"
-    else
-        handle_error "Unknown package: $package_name"
+        # Add any Pywebserver-specific installation steps here
+        echo "Pywebserver-specific installation steps..."
     fi
 
-    echo "Installing '$package_name'..."
-    wget -O "$package_name.zip" "$package_url"
-    unzip "$package_name.zip" -d "./apps/"
-    rm -f "$package_name.zip"
-
-    # Additional installation steps specific to the package can be added here
+    echo "$package_name is installed."
 }
 
-# Function to uninstall a package
-uninstall_package() {
-    local package_name="$1"
-
-    if [ -d "./apps/$package_name" ]; then
-        echo "Uninstalling '$package_name'..."
-        rm -rf "./apps/$package_name"
-    else
-        echo "'$package_name' is not installed."
+function rollback_nosecrets() {
+    echo "Rolling back Nosecrets installation..."
+    # Implement rollback logic for Nosecrets if needed
+    if [ -d "$install_dir/nosecrets" ]; then
+        rm -rf "$install_dir/nosecrets"
     fi
 }
 
-# Function to test a package installation
-test_package() {
-    local package_name="$1"
-
-    if [ -d "./apps/$package_name" ]; then
-        echo "Testing '$package_name'..."
-        # Add test steps specific to the package
-    else
-        handle_error "'$package_name' is not installed. Please install it first."
+function rollback_pywebserver() {
+    echo "Rolling back Pywebserver installation..."
+    # Implement rollback logic for Pywebserver if needed
+    if [ -d "$install_dir/pywebserver" ]; then
+        rm -rf "$install_dir/pywebserver"
     fi
 }
 
-# Function to remove dependencies, files, and directories
-remove() {
-    # Remove installed dependencies (unzip, wget, curl)
+function test_nosecrets() {
+    echo "Testing Nosecrets..."
+    # Implement tests for Nosecrets if needed
+    if [ -d "$install_dir/nosecrets" ]; then
+        # Add Nosecrets-specific test steps here
+        echo "Nosecrets-specific test steps..."
+    else
+        handle_error "Nosecrets is not installed."
+    fi
+}
+
+function test_pywebserver() {
+    echo "Testing Pywebserver..."
+    # Implement tests for Pywebserver if needed
+    if [ -d "$install_dir/pywebserver" ]; then
+        # Add Pywebserver-specific test steps here
+        echo "Pywebserver-specific test steps..."
+    else
+        handle_error "Pywebserver is not installed."
+    fi
+}
+
+function uninstall_nosecrets() {
+    echo "Uninstalling Nosecrets..."
+    # Implement uninstallation logic for Nosecrets if needed
+    rollback_nosecrets
+    echo "Nosecrets is uninstalled."
+}
+
+function uninstall_pywebserver() {
+    echo "Uninstalling Pywebserver..."
+    # Implement uninstallation logic for Pywebserver if needed
+    rollback_pywebserver
+    echo "Pywebserver is uninstalled."
+}
+
+# Function to remove installed dependencies during setup and restore the folder structure to the original state
+function remove() {
     echo "Removing installed dependencies..."
-    sudo apt-get remove unzip wget curl -y
-    sudo apt-get autoremove -y
 
-    # Remove created directories and files
-    echo "Removing created directories and files..."
-    rm -rf "./apps"  # Remove the entire 'apps' directory
-    # Add additional cleanup steps as needed
+    if [ -d "$install_dir" ]; then
+        rm -rf "$install_dir"
+    fi
 
-    # Optional: Remove configuration files and test data if required
-    # rm -f "config.conf"
-    # rm -f "test.json"
+    if [ -f "config.conf" ]; then
+        rm "config.conf"
+    fi
 
-    echo "Cleanup complete."
+    echo "Dependencies are removed, and the folder structure is restored."
 }
 
-# Main script
-case "$1" in
-    "setup")
-        install_dependencies
-        create_directory_structure
-        ;;
-    "nosecrets" | "pywebserver")
-        case "$2" in
-            "--install")
-                install_package "$1"
-                ;;
-            "--uninstall")
-                uninstall_package "$1"
-                ;;
-            "--test")
-                test_package "$1"
-                ;;
-            *)
-                handle_error "Invalid option for $1"
-                ;;
-        esac
-        ;;
-    "remove")
-        remove
-        ;;
-    *)
-        handle_error "Invalid command"
-        ;;
-esac
+function main() {
+    echo "Main function..."
 
-exit 0
+    # Read global variables from config file if needed
+
+    # Get arguments from the command line
+    if [ $# -lt 2 ]; then
+        handle_error "Insufficient arguments provided. Usage: ./assignment.sh [setup|nosecrets|pywebserver|remove] [--install|--uninstall|--test]"
+    fi
+
+    # Check if the first argument is valid
+    case "$1" in
+        "setup"|"nosecrets"|"pywebserver"|"remove") ;;
+        *)
+            handle_error "Invalid command: $1"
+            ;;
+    esac
+
+    # Check if the second argument is provided on the command line
+    if [ -z "$2" ]; then
+        handle_error "Missing second argument. Usage: ./assignment.sh [setup|nosecrets|pywebserver|remove] [--install|--uninstall|--test]"
+    fi
+
+    # Check if the second argument is valid
+    case "$2" in
+        "--install"|"--uninstall"|"--test") ;;
+        *)
+            handle_error "Invalid option: $2"
+            ;;
+    esac
+
+    # Execute the appropriate command based on the arguments
+    case "$1" in
+        "setup")
+            setup
+            ;;
+        "nosecrets")
+            if [ "$2" == "--install" ]; then
+                install_package "nosecrets" "$(grep 'nosecrets_url' config.conf | cut -d= -f2)" "$install_dir"
+            elif [ "$2" == "--uninstall" ]; then
+                uninstall_nosecrets
+            elif [ "$2" == "--test" ]; then
+                test_nosecrets
+            fi
+            ;;
+        "pywebserver")
+            if [ "$2" == "--install" ]; then
+                install_package "pywebserver" "$(grep 'pywebserver_url' config.conf | cut -d= -f2)" "$install_dir"
+            elif [ "$2" == "--uninstall" ]; then
+                uninstall_pywebserver
+            elif [ "$2" == "--test" ]; then
+                test_pywebserver
+            fi
+            ;;
+        "remove")
+            remove
+            ;;
+    esac
+}
+
+# Pass command-line arguments to function main
+main "$@"
