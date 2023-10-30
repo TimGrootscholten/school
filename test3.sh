@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 
-# Define global variable here
-
 # TODO: Add required and additional package dependencies
 declare -a packages=("unzip" "wget" "curl")
 
 # TODO: define a function to handle errors
 # This function accepts two parameters: an error message and a command to be executed when an error occurs.
 function handle_error() {
+
+    echo "function handle_error"
+  
     echo "Error: $1"
     if [ ! -z "$2" ]; then
         eval "$2"
@@ -27,8 +28,8 @@ function setup() {
     done
 
     # Check if required folders and files exist before installations
-    if [ ! -d "$INSTALL_DIR" ]; then
-        mkdir -p "$INSTALL_DIR"
+    if [ ! -d "$(grep 'INSTALL_DIR' dev.conf | cut -d= -f2)" ]; then
+        mkdir -p "$(grep 'INSTALL_DIR' dev.conf | cut -d= -f2)"
     fi
 }
 
@@ -46,17 +47,28 @@ function install_package() {
     fi
 
     # Download and unzip the package
-    wget -O "$install_dir/$package_name/$package_name.zip" "$package_url"
+    wget -O "$install_dir/$package_name.zip" "$package_url"
     if [ $? -ne 0 ]; then
         handle_error "Failed to download $package_name." "rm -rf $install_dir/$package_name"
     fi
-    unzip "$install_dir/$package_name/$package_name.zip" -d "$install_dir/$package_name"
+    unzip "$install_dir/$package_name.zip" -d "$install_dir"
     if [ $? -ne 0 ]; then
-        handle_error "Failed to unzip $package_name." "rm -rf $install_dir/$package_name"
+        handle_error "Failed to unzip $package_name." "rm -rf $install_dir"
     fi
 
     # Implement application-specific logic here
+    if [ "$package_name" == "nosecrets" ]; then
+        # Add any Nosecrets-specific installation steps here
+        echo "Nosecrets-specific installation steps... "
+        mv -T "$install_dir/no-more-secrets-master" "$install_dir/$package_name"
+    elif [ "$package_name" == "pywebserver" ]; then
+        # Add any Pywebserver-specific installation steps here
+        echo "Pywebserver-specific installation steps..."
+        mv -T "$install_dir/webserver-master" "$install_dir/$package_name"
 
+    fi
+    # cleanup install zip
+    rm "$install_dir/$package_name.zip"
     echo "$package_name has been installed successfully."
 }
 
@@ -100,8 +112,7 @@ function main() {
 
     # Get arguments from the command line
     local command="$1"
-    local package_name="$2"
-    local action="$3"
+    local action="$2"
 
     if [ -z "$command" ]; then
         handle_error "Missing command. Usage: $0 <command> [package] [action]"
@@ -111,49 +122,41 @@ function main() {
         "setup")
             setup
             ;;
-        *)
-            if [ -z "$package_name" ]; then
-                handle_error "Missing package name. Usage: $0 $command <package> [action]"
-            fi
-
-            case "$package_name" in
-                "nosecrets")
-                    case "$action" in
-                        "--install")
-                            install_package "nosecrets" "$APP1_URL" "$INSTALL_DIR"
-                            ;;
-                        "--uninstall")
-                            uninstall_package "nosecrets" "$INSTALL_DIR"
-                            ;;
-                        "--test")
-                            test_package "nosecrets"
-                            ;;
-                        *)
-                            handle_error "Invalid action for nosecrets. Use --install, --uninstall, or --test."
-                            ;;
-                    esac
+        "nosecrets")
+            case "$action" in
+                "--install")
+                    install_package "nosecrets" "$(grep 'APP1_URL' dev.conf | cut -d= -f2)" "$(grep 'INSTALL_DIR' dev.conf | cut -d= -f2)"
                     ;;
-                "pywebserver")
-                    case "$action" in
-                        "--install")
-                            install_package "pywebserver" "$APP2_URL" "$INSTALL_DIR"
-                            ;;
-                        "--uninstall")
-                            uninstall_package "pywebserver" "$INSTALL_DIR"
-                            ;;
-                        "--test")
-                            test_package "pywebserver"
-                            ;;
-                        *)
-                            handle_error "Invalid action for pywebserver. Use --install, --uninstall, or --test."
-                            ;;
-                    esac
+                "--uninstall")
+                    uninstall_package "nosecrets" "$(grep 'INSTALL_DIR' dev.conf | cut -d= -f2)"
+                    ;;
+                "--test")
+                    test_package "nosecrets"
                     ;;
                 *)
-                    handle_error "Invalid package name. Use 'nosecrets' or 'pywebserver'."
+                    handle_error "Invalid action for nosecrets. Use --install, --uninstall, or --test."
                     ;;
             esac
             ;;
+        "pywebserver")
+            case "$action" in
+                "--install")
+                    install_package "pywebserver" "$(grep 'APP2_URL' dev.conf | cut -d= -f2)" "$(grep 'INSTALL_DIR' dev.conf | cut -d= -f2)"
+                    ;;
+                "--uninstall")
+                    uninstall_package "pywebserver" "$(grep 'INSTALL_DIR' dev.conf | cut -d= -f2)"
+                    ;;
+                "--test")
+                    test_package "pywebserver"
+                    ;;
+                *)
+                    handle_error "Invalid action for pywebserver. Use --install, --uninstall, or --test."
+                    ;;
+            esac
+            ;;
+        *)
+        handle_error "Invalid package name. Use 'nosecrets' or 'pywebserver'."
+        ;;
     esac
 }
 

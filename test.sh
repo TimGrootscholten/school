@@ -6,7 +6,7 @@
 declare -a packages=("unzip" "wget" "curl")
 
 # Define the installation directory
-install_dir="./apps"
+install_dir= $(grep 'INSTALL_DIR' dev.conf | cut -d= -f2)
 
 # Function to handle errors
 function handle_error() {
@@ -54,7 +54,6 @@ function install_package() {
     local package_install_dir="$3"
     
     echo "Installing $package_name..."
-
     if [ -d "$package_install_dir/$package_name" ]; then
         handle_error "$package_name is already installed."
     fi
@@ -79,11 +78,14 @@ function install_package() {
     if [ "$package_name" == "nosecrets" ]; then
         # Add any Nosecrets-specific installation steps here
         echo "Nosecrets-specific installation steps..."
+        mv "$package_install_dir/no-more-secrets-master" "$package_install_dir/$package_name"
     elif [ "$package_name" == "pywebserver" ]; then
         # Add any Pywebserver-specific installation steps here
         echo "Pywebserver-specific installation steps..."
-    fi
+        mv "$package_install_dir/webserver-master" "$package_install_dir/$package_name"
 
+    fi
+    rm "$package_install_dir/master.zip"
     echo "$package_name is installed."
 }
 
@@ -156,13 +158,12 @@ function remove() {
 
 function main() {
     echo "Main function..."
+    echo "Created '$(grep 'INSTALL_DIR' dev.conf | cut -d= -f2)' directory."
+    echo "Created '$install_dir' directory."
+
 
     # Read global variables from config file if needed
 
-    # Get arguments from the command line
-    if [ $# -lt 2 ]; then
-        handle_error "Insufficient arguments provided. Usage: ./assignment.sh [setup|nosecrets|pywebserver|remove] [--install|--uninstall|--test]"
-    fi
 
     # Check if the first argument is valid
     case "$1" in
@@ -172,10 +173,14 @@ function main() {
             ;;
     esac
 
-    # Check if the second argument is provided on the command line
-    if [ -z "$2" ]; then
-        handle_error "Missing second argument. Usage: ./assignment.sh [setup|nosecrets|pywebserver|remove] [--install|--uninstall|--test]"
-    fi
+    # # Get arguments from the command line
+    # if [ $# -lt 2 ]; then
+    #     handle_error "Insufficient arguments provided. Usage: ./assignment.sh [setup|nosecrets|pywebserver|remove] [--install|--uninstall|--test]"
+    # fi
+    # # Check if the second argument is provided on the command line
+    # if [ -z "$2" ]; then
+    #     handle_error "Missing second argument. Usage: ./assignment.sh [setup|nosecrets|pywebserver|remove] [--install|--uninstall|--test]"
+    # fi
 
     # Check if the second argument is valid
     case "$2" in
@@ -192,7 +197,7 @@ function main() {
             ;;
         "nosecrets")
             if [ "$2" == "--install" ]; then
-                install_package "nosecrets" "$(grep 'nosecrets_url' config.conf | cut -d= -f2)" "$install_dir"
+                install_package "nosecrets" "$(grep 'APP1_URL' dev.conf | cut -d= -f2)" "$install_dir"
             elif [ "$2" == "--uninstall" ]; then
                 uninstall_nosecrets
             elif [ "$2" == "--test" ]; then
@@ -201,7 +206,7 @@ function main() {
             ;;
         "pywebserver")
             if [ "$2" == "--install" ]; then
-                install_package "pywebserver" "$(grep 'pywebserver_url' config.conf | cut -d= -f2)" "$install_dir"
+                install_package "pywebserver" "$(grep 'APP2_URL' dev.conf | cut -d= -f2)" "$install_dir"
             elif [ "$2" == "--uninstall" ]; then
                 uninstall_pywebserver
             elif [ "$2" == "--test" ]; then
