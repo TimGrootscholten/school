@@ -109,6 +109,25 @@ test_package() {
     fi
 }
 
+# Function to remove dependencies, files, and directories
+remove() {
+    # Remove installed dependencies (unzip, wget, curl)
+    echo "Removing installed dependencies..."
+    sudo apt-get remove unzip wget curl -y
+    sudo apt-get autoremove -y
+
+    # Remove created directories and files
+    echo "Removing created directories and files..."
+    rm -rf "./apps"  # Remove the entire 'apps' directory
+    # Add additional cleanup steps as needed
+
+    # Optional: Remove configuration files and test data if required
+    # rm -f "config.conf"
+    # rm -f "test.json"
+
+    echo "Cleanup complete."
+}
+
 # Main script
 case "$1" in
     "setup")
@@ -132,8 +151,7 @@ case "$1" in
         esac
         ;;
     "remove")
-        # Remove all dependencies and files created by the script
-        # Add logic here
+        remove
         ;;
     *)
         handle_error "Invalid command"
