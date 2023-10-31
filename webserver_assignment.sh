@@ -146,4 +146,4 @@ function main() {
 }
 
 # Pass commandline arguments to function main
-main "$@"
+main "$@"school/webserver_assignment.sh
