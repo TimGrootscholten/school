@@ -6,7 +6,6 @@ declare -a packages=("unzip" "wget" "curl")
 # TODO: define a function to handle errors
 # This function accepts two parameters: an error message and a command to be executed when an error occurs.
 function handle_error() {
-
     echo "function handle_error"
   
     echo "Error: $1"
@@ -18,7 +17,8 @@ function handle_error() {
 
 # Function to solve dependencies
 function setup() {
-    echo "Setting up..."
+    # Do not remove next line!
+    echo "function setup"
 
     # Check if necessary dependencies and folder structure exist
     for package in "${packages[@]}"; do
@@ -35,6 +35,8 @@ function setup() {
 
 # Function to install a package from a URL
 function install_package() {
+        # Do not remove next line!
+    echo "function install_package"
     local package_name="$1"
     local package_url="$2"
     local install_dir="$3"
