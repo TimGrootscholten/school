@@ -142,12 +142,16 @@ function test_pywebserver() {
     echo "function test_pywebserver"    
 
     "$INSTALL_DIR/pywebserver/webserver" &
-    sleep 5
-    echo "hoiiii"
-    curl localhost:8008/ -H "Content-Type: application/json" -X POST --data '{"foo":"bar"}'
+    # wait for the webserver to startup
+    sleep 0.1
+
     # TODO test the webserver
     # server and port number must be extracted from config.conf
     # test data must be read from test.json  
+    curl $WEBSERVER_IP:$WEBSERVER_PORT/ \
+    -H "Content-Type: application/json" \
+    -X POST --data @test.json
+
     # kill this webserver process after it has finished its job
     local process_id=$(pgrep -f "$INSTALL_DIR/pywebserver/webserver")
     kill "$process_id"
