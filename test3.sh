@@ -61,6 +61,7 @@ function install_package() {
         # Add any Nosecrets-specific installation steps here
         echo "Nosecrets-specific installation steps... "
         mv -T "$install_dir/no-more-secrets-master" "$install_dir/$package_name"
+        make mns
     elif [ "$package_name" == "pywebserver" ]; then
         # Add any Pywebserver-specific installation steps here
         echo "Pywebserver-specific installation steps..."
