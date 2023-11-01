@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+# Tim Grootscholten 1055980
 # Define global variable here
 
 # Add required and additional package dependencies
@@ -32,7 +32,7 @@ function setup() {
 
 
     # TODO installation from online package requires values for
-    # package_name package_url install_dir
+    # package_name package_url install_dir 
 
     # check if required dependency is not already installed otherwise install it
     # if a a problem occur during the this process 
@@ -70,15 +70,21 @@ function install_package() {
 
     # TODO: Check if the application folder and the URL of the dependency exist
     # folder
-    if [ ! -d "$install_dir/$package_name" ]; then
-        mkdir -p "$install_dir/$package_name"
-    fi
+
+    rm -r "$install_dir/$package_name"
+    mkdir -p "$install_dir/$package_name"
+
     # make temp folder 
-    mkdir -p "$install_dir/tmp"
+    mkdir -p "$install_dir/temp"
 
 
     #  URL of the dependency exists
     if !curl --output /dev/null --silent --head --fail "$package_url"; then
+        if [ "$package_name" == "nosecrets" ]; then
+            rollback_nosecrets
+        else
+            rollback_pywebserver
+        fi
         handle_error "URL for $package_name does not exist."
     fi
 
@@ -86,10 +92,20 @@ function install_package() {
     # TODO: Download and unzip the package
     wget -O "$install_dir/temp/$package_name.zip" "$package_url"
     if [ $? -ne 0 ]; then
+        if [ "$package_name" == "nosecrets" ]; then
+            rollback_nosecrets
+        else
+            rollback_pywebserver
+        fi
         handle_error "Failed to download $package_name." "rm -rf $install_dir/temp/$package_name"
     fi
-    unzip "$install_dir/temp/$package_name.zip" -d "$install_dir/temp/$package_name"
+    unzip -o "$install_dir/temp/$package_name.zip" -d "$install_dir/temp"
     if [ $? -ne 0 ]; then
+        if [ "$package_name" == "nosecrets" ]; then
+            rollback_nosecrets
+        else
+            rollback_pywebserver
+        fi
         handle_error "Failed to unzip $package_name." "rm -rf $install_dir/temp/$package_name"
     fi
 
@@ -98,14 +114,19 @@ function install_package() {
         # Add any Nosecrets-specific installation steps here
         echo "Nosecrets-specific installation steps... "
         mv -T "$install_dir/temp/no-more-secrets-master" "$install_dir/$package_name"
+        cd "$install_dir/nosecrets"
+        make nms
+        make sneakers
+        sudo make install
     elif [ "$package_name" == "pywebserver" ]; then
         # Add any Pywebserver-specific installation steps here
         echo "Pywebserver-specific installation steps..."
-        mv -T "$install_dir/webserver-master" "$install_dir/$package_name"
+        mv -T "$install_dir/temp/webserver-master" "$install_dir/$package_name"
+        chmod +x "$install_dir/$package_name/webserver"
     fi
 
     # cleanup install temp folder
-    rm "$install_dir/temp"
+    rm -r "$install_dir/temp"
 
     echo "$package_name has been installed successfully."
 }
@@ -113,21 +134,23 @@ function install_package() {
 function rollback_nosecrets() {
     # Do not remove next line!
     echo "function rollback_nosecrets"
-
+    
     # TODO rollback intermiediate steps when installation fails
+    rm -r "$install_dir/temp"
 }
 
 function rollback_pywebserver() {
     # Do not remove next line!
     echo "function rollback_pywebserver"
-
+    
     # TODO rollback intermiediate steps when installation fails
+    rm -r "$install_dir/temp"
 }
 
 function test_nosecrets() {
     # Do not remove next line!
     echo "function test_nosecrets"
-
+    ls -l | nms
     # TODO test nosecrets
     # kill this webserver process after it has finished its job
 
@@ -137,11 +160,20 @@ function test_pywebserver() {
     # Do not remove next line!
     echo "function test_pywebserver"    
 
+    "$INSTALL_DIR/pywebserver/webserver" &
+    # wait for the webserver to startup
+    sleep 0.1
+
     # TODO test the webserver
     # server and port number must be extracted from config.conf
     # test data must be read from test.json  
-    # kill this webserver process after it has finished its job
+    curl $WEBSERVER_IP:$WEBSERVER_PORT/ \
+    -H "Content-Type: application/json" \
+    -X POST --data @test.json
 
+    # kill this webserver process after it has finished its job
+    local process_id=$(pgrep -f "$INSTALL_DIR/pywebserver/webserver")
+    kill "$process_id"
 }
 
 function uninstall_nosecrets() {
@@ -150,7 +182,7 @@ function uninstall_nosecrets() {
 
     #task: uninstall nosecrets application
     # fix: remove folder nosecrets
-    rm "$install_dir/nosecrets"
+    rm -r "$INSTALL_DIR/nosecrets"
 
 }
 
@@ -159,7 +191,7 @@ function uninstall_pywebserver() {
     
     #task: uninstall pywebserver application
     # fix: remove folder nosecrets
-    rm "$install_dir/pywebserver"
+    rm -r "$INSTALL_DIR/pywebserver"
 }
 
 #TODO removing installed dependency during setup() and restoring the folder structure to original state
@@ -170,9 +202,9 @@ function remove() {
     # task: Remove each package that was installed during setup
     # fix: remove the install folder and make a new install folder 
 
-    rm "$install_dir"
+    rm -r "$INSTALL_DIR"
 
-    mkdir -p "$install_dir"
+    mkdir -p "$INSTALL_DIR"
 }
 
 function main() {
@@ -183,7 +215,8 @@ function main() {
 
     # Get arguments from the command line
     local command="$1"
-    local package_name="$2"
+    local action="$2"
+
 
     if [ -z "$command" ]; then
         handle_error "Missing command. Usage: $0 <command> [package]"
