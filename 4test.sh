@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+# Tim Grootscholten 1055980
 # Define global variable here
 
 # Add required and additional package dependencies
@@ -32,7 +32,7 @@ function setup() {
 
 
     # TODO installation from online package requires values for
-    # package_name package_url install_dir
+    # package_name package_url install_dir 
 
     # check if required dependency is not already installed otherwise install it
     # if a a problem occur during the this process 
@@ -79,9 +79,12 @@ function install_package() {
 
 
     #  URL of the dependency exists
-    if curl --output /dev/null --silent --head --fail "$package_url"; then
-        echo "URL for $package_name exists."
-    else
+    if !curl --output /dev/null --silent --head --fail "$package_url"; then
+        if [ "$package_name" == "nosecrets" ]; then
+            rollback_nosecrets
+        else
+            rollback_pywebserver
+        fi
         handle_error "URL for $package_name does not exist."
     fi
 
@@ -89,10 +92,20 @@ function install_package() {
     # TODO: Download and unzip the package
     wget -O "$install_dir/temp/$package_name.zip" "$package_url"
     if [ $? -ne 0 ]; then
+        if [ "$package_name" == "nosecrets" ]; then
+            rollback_nosecrets
+        else
+            rollback_pywebserver
+        fi
         handle_error "Failed to download $package_name." "rm -rf $install_dir/temp/$package_name"
     fi
     unzip -o "$install_dir/temp/$package_name.zip" -d "$install_dir/temp"
     if [ $? -ne 0 ]; then
+        if [ "$package_name" == "nosecrets" ]; then
+            rollback_nosecrets
+        else
+            rollback_pywebserver
+        fi
         handle_error "Failed to unzip $package_name." "rm -rf $install_dir/temp/$package_name"
     fi
 
@@ -101,6 +114,10 @@ function install_package() {
         # Add any Nosecrets-specific installation steps here
         echo "Nosecrets-specific installation steps... "
         mv -T "$install_dir/temp/no-more-secrets-master" "$install_dir/$package_name"
+        cd "$install_dir/nosecrets"
+        make nms
+        make sneakers
+        sudo make install
     elif [ "$package_name" == "pywebserver" ]; then
         # Add any Pywebserver-specific installation steps here
         echo "Pywebserver-specific installation steps..."
@@ -117,21 +134,23 @@ function install_package() {
 function rollback_nosecrets() {
     # Do not remove next line!
     echo "function rollback_nosecrets"
-
+    
     # TODO rollback intermiediate steps when installation fails
+    rm -r "$install_dir/temp"
 }
 
 function rollback_pywebserver() {
     # Do not remove next line!
     echo "function rollback_pywebserver"
-
+    
     # TODO rollback intermiediate steps when installation fails
+    rm -r "$install_dir/temp"
 }
 
 function test_nosecrets() {
     # Do not remove next line!
     echo "function test_nosecrets"
-
+    ls -l | nms
     # TODO test nosecrets
     # kill this webserver process after it has finished its job
 
@@ -183,7 +202,7 @@ function remove() {
     # task: Remove each package that was installed during setup
     # fix: remove the install folder and make a new install folder 
 
-    rm "$INSTALL_DIR"
+    rm -r "$INSTALL_DIR"
 
     mkdir -p "$INSTALL_DIR"
 }
