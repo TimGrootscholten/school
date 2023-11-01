@@ -37,7 +37,7 @@ function setup() {
     # check if required dependency is not already installed otherwise install it
     # if a a problem occur during the this process 
     # use the function handle_error() to print a messgage and handle the error
-     for package in "${packages[@]}"; do
+    for package in "${packages[@]}"; do
         if ! command -v "$package" &>/dev/null; then
             echo "$package is not installed. Installing it..."
             sudo apt-get install "$package" || handle_error "Failed to install $package." "apt-get install $package"
@@ -78,9 +78,7 @@ function install_package() {
 
 
     #  URL of the dependency exists
-    if curl --output /dev/null --silent --head --fail "$package_url"; then
-        echo "URL for $package_name exists."
-    else
+    if !curl --output /dev/null --silent --head --fail "$package_url"; then
         handle_error "URL for $package_name does not exist."
     fi
 
