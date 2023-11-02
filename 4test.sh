@@ -219,7 +219,7 @@ function main() {
 
 
     if [ -z "$command" ]; then
-        handle_error "Missing command. Usage: $0 <command> [package]"
+        handle_error "Missing command. Usage: $0 <command> [action]"
     fi
 
     case "$command" in
