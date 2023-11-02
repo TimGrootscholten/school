@@ -153,9 +153,19 @@ function test_pywebserver() {
 
     # server and port number must be extracted from config.conf
     # test data must be read from test.json  
+
+    ip=$(grep 'WEBSERVER_IP' config.conf | cut -d= -f2)
+    port=$(grep 'WEBSERVER_PORT' config.conf | cut -d= -f2)
+
+    if [ $? -eq 0 ]; then
+        curl $ip:$port/ \
+        -H "Content-Type: application/json" \
+        -X POST --data @test.json
+    else
     curl $WEBSERVER_IP:$WEBSERVER_PORT/ \
-    -H "Content-Type: application/json" \
-    -X POST --data @test.json
+        -H "Content-Type: application/json" \
+        -X POST --data @test.json
+    fi
 
     # kill this webserver process after it has finished its job
     local process_id=$(pgrep -f "$INSTALL_DIR/pywebserver/webserver")
