@@ -37,7 +37,7 @@ function setup() {
     # check if required dependency is not already installed otherwise install it
     # if a a problem occur during the this process 
     # use the function handle_error() to print a messgage and handle the error
-     for package in "${packages[@]}"; do
+    for package in "${packages[@]}"; do
         if ! command -v "$package" &>/dev/null; then
             echo "$package is not installed. Installing it..."
             sudo apt-get install "$package" || handle_error "Failed to install $package." "apt-get install $package"
@@ -79,7 +79,7 @@ function install_package() {
 
 
     #  URL of the dependency exists
-    if !curl --output /dev/null --silent --head --fail "$package_url"; then
+    if ! curl --output /dev/null --silent --head --fail "$package_url"; then
         if [ "$package_name" == "nosecrets" ]; then
             rollback_nosecrets
         else
@@ -90,8 +90,7 @@ function install_package() {
 
 
     # TODO: Download and unzip the package
-    wget -O "$install_dir/temp/$package_name.zip" "$package_url"
-    if [ $? -ne 0 ]; then
+    if ! wget -O "$install_dir/temp/$package_name.zip" "$package_url"; then
         if [ "$package_name" == "nosecrets" ]; then
             rollback_nosecrets
         else
@@ -99,8 +98,7 @@ function install_package() {
         fi
         handle_error "Failed to download $package_name." "rm -rf $install_dir/temp/$package_name"
     fi
-    unzip -o "$install_dir/temp/$package_name.zip" -d "$install_dir/temp"
-    if [ $? -ne 0 ]; then
+    if ! unzip -o "$install_dir/temp/$package_name.zip" -d "$install_dir/temp"; then
         if [ "$package_name" == "nosecrets" ]; then
             rollback_nosecrets
         else
@@ -151,9 +149,6 @@ function test_nosecrets() {
     # Do not remove next line!
     echo "function test_nosecrets"
     ls -l | nms
-    # TODO test nosecrets
-    # kill this webserver process after it has finished its job
-
 }
 
 function test_pywebserver() {
@@ -162,7 +157,7 @@ function test_pywebserver() {
 
     "$INSTALL_DIR/pywebserver/webserver" &
     # wait for the webserver to startup
-    sleep 0.1
+    sleep 0.2
 
     # TODO test the webserver
     # server and port number must be extracted from config.conf
